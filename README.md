@@ -1,35 +1,52 @@
-# Projeto: Chat Web em Tempo Real com Flask
+# Projeto: Chat Web Seguro em Tempo Real com Flask
 
-![Status](https://img.shields.io/badge/status-concluído-brightgreen)
+![Status](httpshttps://img.shields.io/badge/status-concluído-brightgreen)
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
-![Flask](https://img.shields.io/badge/Flask-2.0-orange)
-![Socket.IO](https://img.shields.io/badge/Socket.IO-4.0-yellow)
+![Flask](https://img.shields.io/badge/Flask-2.x-orange)
+![Socket.IO](https://img.shields.io/badge/Socket.IO-4.x-yellow)
+![Cryptography](https://img.shields.io/badge/Criptografia-AES-purple)
 
 ## Descrição
 
-Este projeto é uma aplicação de chat em tempo real baseada na web. Desenvolvido com Python, Flask e WebSockets, o sistema permite que múltiplos usuários se conectem, criem salas de bate-papo (públicas ou protegidas por senha) e conversem em tempo real. As mensagens enviadas em uma sala são visíveis apenas para os participantes daquela sala, garantindo privacidade e organização.
+Este projeto é uma aplicação web completa de chat em tempo real, construída com Python e Flask. A aplicação vai além de um simples chat, incorporando um robusto sistema de **autenticação de usuários com sessões**, **salas de chat privadas protegidas por senha** e **criptografia de ponta a ponta (nível de aplicação) para as mensagens trocadas nas salas**.
 
-A aplicação foi projetada para ser simples, responsiva e demonstrar os conceitos fundamentais de comunicação cliente-servidor em um ambiente web moderno.
+A interface é reativa e dividida em dois estados principais: um "Lobby", onde os usuários podem ver quem está online no servidor e gerenciar salas, e uma "Sala de Chat", para a comunicação. O projeto também inclui funcionalidades avançadas como mensagens privadas (sussurros), cálculo de latência (ping) em tempo real, e uma página de monitoramento de recursos do servidor.
+
+## Funcionalidades Implementadas
+
+- ✅ **Sistema de Autenticação:** Registro e Login de usuários com senhas seguras (hashed) e persistência de sessão.
+- ✅ **Múltiplas Salas:** Criação de salas públicas ou privadas (protegidas por senha).
+- ✅ **Lobby Interativo:** Visualização de todos os usuários online no servidor e de todas as salas disponíveis.
+- ✅ **Criptografia de Mensagens:** As mensagens trocadas dentro das salas são criptografadas com o algoritmo **AES**, garantindo a confidencialidade. As chaves são gerenciadas por sala e distribuídas de forma segura aos participantes.
+- ✅ **Sussurros (Mensagens Privadas):** Capacidade de enviar mensagens diretas para outros usuários, clicando em seus nomes.
+- ✅ **Visualização de Latência (Ping):** As mensagens enviadas pelo usuário exibem o tempo de ida e volta (RTT) em milissegundos.
+- ✅ **Interface Reativa:** A interface do usuário muda dinamicamente dependendo se o usuário está no lobby ou dentro de uma sala de chat.
+- ✅ **Página de Monitoramento:** Uma rota oculta (`/memory`) exibe um gráfico em tempo real do uso de memória do servidor, útil para testes de carga.
+- ✅ **Script de Teste de Estresse:** Inclui um script (`stress_test.py`) para simular dezenas de usuários simultâneos, testando a capacidade e a estabilidade da aplicação.
 
 ## Tecnologias Utilizadas
 
-A aplicação é dividida em duas partes principais: o backend (servidor) e o frontend (cliente, que roda no navegador).
-
 ### Backend
 * **Python 3:** Linguagem de programação principal.
-* **Flask:** Micro-framework web utilizado para servir a aplicação e gerenciar as rotas HTTP.
-* **Flask-SocketIO:** Extensão que integra o Flask com a biblioteca Socket.IO, facilitando a comunicação bidirecional e em tempo real via WebSockets.
-* **Eventlet:** Servidor WSGI de produção, recomendado pelo Flask-SocketIO para lidar com a natureza assíncrona das conexões de longa duração.
+* **Flask:** Micro-framework web para gerenciamento de rotas HTTP e sessões.
+* **Flask-SocketIO:** Para comunicação bidirecional em tempo real via WebSockets.
+* **pycryptodome:** Biblioteca utilizada para a criptografia AES no lado do servidor.
+* **psutil:** Para coletar métricas de uso de memória do servidor para a página de monitoramento.
+* **hashlib:** Para o hashing seguro das senhas dos usuários.
+* **Eventlet:** Servidor WSGI para produção e execução de tarefas em background.
 
 ### Frontend
-* **HTML5:** Para a estruturação semântica da página do chat.
-* **CSS3:** Utilizado para a estilização básica e responsiva da interface, garantindo uma experiência de usuário agradável.
-* **JavaScript (ES6):** O cérebro do lado do cliente. Responsável por estabelecer a conexão WebSocket, manipular o DOM para exibir mensagens, e enviar eventos para o servidor.
-* **Socket.IO Client:** Biblioteca JavaScript que se conecta ao servidor Flask-SocketIO para a troca de mensagens em tempo real.
+* **HTML5 / CSS3:** Estruturação e estilização da interface.
+* **JavaScript (ES6):** Lógica do lado do cliente para interatividade e comunicação com o servidor.
+* **Socket.IO Client:** Biblioteca JavaScript para a conexão WebSocket.
+* **CryptoJS:** Biblioteca JavaScript para criptografia e descriptografia AES no navegador.
+* **Chart.js:** Para a renderização do gráfico de uso de memória na página de monitoramento.
+
+### Testes
+* **requests:** Para simular requisições HTTP de login/registro no script de teste.
+* **python-socketio[client]:** Para simular clientes WebSocket completos no script de teste.
 
 ## Como Executar
-
-Siga os passos abaixo para configurar e rodar o projeto em seu ambiente local.
 
 ### Pré-requisitos
 * [Git](https://git-scm.com/)
@@ -39,102 +56,71 @@ Siga os passos abaixo para configurar e rodar o projeto em seu ambiente local.
 
 1.  **Clone o repositório:**
     ```bash
-    git clone [https://github.com/SEU-USUARIO/chat-web-flask.git](https://github.com/SEU-USUARIO/chat-web-flask.git)
+    git clone [https://github.com/SEU-USUARIO/SEU-REPOSITORIO.git](https://github.com/SEU-USUARIO/SEU-REPOSITORIO.git)
+    cd SEU-REPOSITORIO
     ```
 
-2.  **Navegue até a pasta do projeto:**
+2.  **Crie e ative um ambiente virtual:**
     ```bash
-    cd chat-web-flask
-    ```
-
-3.  **Crie e ative um ambiente virtual:**
-    ```bash
-    # Criar o ambiente
+    # Criar
     python -m venv venv
-
     # Ativar no Windows
     .\venv\Scripts\activate
-
     # Ativar no macOS/Linux
     source venv/bin/activate
     ```
 
-4.  **Instale as dependências:**
-    O arquivo `requirements.txt` contém todas as bibliotecas Python necessárias.
+3.  **Instale as dependências:**
+    O arquivo `requirements.txt` contém todas as bibliotecas necessárias.
     ```bash
     pip install -r requirements.txt
     ```
 
-5.  **Execute o servidor:**
+4.  **Execute o servidor:**
     ```bash
     python app.py
     ```
 
-6.  **Acesse a aplicação:**
-    Abra seu navegador de internet e acesse o seguinte endereço:
-    [http://127.0.0.1:5000](http://127.0.0.1:5000)
+5.  **Acesse a aplicação:**
+    Abra seu navegador e acesse: [http://127.0.0.1:5000](http://127.0.0.1:5000)
+    Você será direcionado para a página de login.
 
 ## Como Testar
 
-Para testar a funcionalidade de chat em tempo real, você precisará simular múltiplos usuários.
+A aplicação foi projetada para ser testada de várias maneiras.
 
-1.  Abra duas ou mais abas ou janelas do seu navegador e acesse `http://127.0.0.1:5000` em cada uma delas.
-2.  No **Cliente 1**:
-    * Digite um nome de usuário (ex: "Ana").
-    * Clique em "Conectar".
-    * Digite um nome para a sala (ex: "jogos") e uma senha (ex: "123").
-    * Clique em "Criar Sala" e depois em "Entrar na Sala".
-3.  No **Cliente 2**:
-    * Digite um nome de usuário diferente (ex: "Beto").
-    * Clique em "Conectar".
-    * Digite o mesmo nome da sala ("jogos") e a mesma senha ("123").
-    * Clique em "Entrar na Sala".
-4.  Agora, envie uma mensagem de qualquer um dos clientes. A mensagem deverá aparecer instantaneamente na tela do outro cliente.
-5.  Observe as mensagens de status, como "[usuário] entrou na sala", que aparecem para todos os participantes.
+### Teste Funcional Manual
+1.  Acesse a aplicação e **registre** dois ou mais usuários em abas/navegadores diferentes.
+2.  **Faça login** com os usuários. Eles aparecerão na lista "Usuários Online" no lobby.
+3.  Com o Usuário A, **crie uma sala privada**. Ela aparecerá na lista de "Salas Disponíveis" com um cadeado (🔒).
+4.  Com o Usuário B, **clique na sala criada** e digite a senha correta para entrar.
+5.  **Envie mensagens** na sala e observe que elas são recebidas pelo outro usuário e exibem o ping para o remetente.
+6.  **Teste o sussurro:** Clique no nome de um usuário em qualquer lista e envie uma mensagem privada. Observe a formatação especial no chat.
+7.  Com um dos usuários, clique em **"Sair da Sala"**. Observe que a interface dele retorna ao lobby instantaneamente, e o outro usuário vê uma notificação de saída.
 
-## Estrutura e Explicação do Código
+### Teste de Criptografia
+1.  Siga as instruções no [guia de teste de criptografia](link_para_um_gist_ou_outro_arquivo_se_quiser) ou use as Ferramentas de Desenvolvedor (F12) do navegador.
+2.  Na aba "Network" (Rede), filtre por "WS" e inspecione as mensagens.
+3.  As mensagens de sala (evento `text`) terão o campo `msg` com um longo texto criptografado.
+4.  As mensagens de sussurro (evento `private_message`) terão o campo `msg` em texto plano.
 
-### `app.py` (Backend)
+### Teste de Carga e Memória
+1.  Com o servidor `app.py` rodando, abra um **novo terminal**.
+2.  Execute o script de teste de estresse: `python stress_test.py`.
+3.  Observe o terminal do servidor sendo inundado com mensagens de bots, e verifique se a aplicação permanece estável.
+4.  Durante o teste, acesse a página **`http://127.0.0.1:5000/memory`** para ver o gráfico de uso de memória do servidor em tempo real.
 
-Este arquivo é o coração do servidor. Ele usa Flask para a estrutura web e Flask-SocketIO para a comunicação em tempo real.
+## Estrutura do Código
 
-* **Inicialização:** O código começa importando as bibliotecas necessárias e inicializando o Flask e o SocketIO.
-* **Armazenamento de Estado:** Duas variáveis globais (`users_in_rooms` e `rooms`) são usadas como um "banco de dados" em memória para armazenar as informações sobre as salas criadas, suas senhas e os usuários conectados. Para um projeto em produção, isso seria substituído por um banco de dados real (como SQLite ou PostgreSQL).
-* **Rota HTTP (`@app.route('/')`):** Há uma única rota HTTP que simplesmente renderiza e serve o arquivo `templates/index.html` para qualquer usuário que acesse a raiz do site.
-* **Eventos WebSocket (`@socketio.on('evento')`):** Esta é a parte principal da lógica do servidor. O servidor "escuta" por eventos enviados pelo cliente (JavaScript) e reage a eles.
-    * `on('create')`: Recebe o nome de uma sala e uma senha (opcional). Adiciona a nova sala ao dicionário `rooms`.
-    * `on('join')`: Lida com a entrada de um usuário em uma sala. Ele verifica se a sala existe, valida a senha, e então usa a função `join_room(room)` do Socket.IO para inscrever o cliente naquele canal de comunicação. Em seguida, ele emite (envia) uma mensagem de status para todos na sala.
-    * `on('text')`: Disparado quando um cliente envia uma mensagem de texto. O servidor recebe a mensagem e a retransmite para **todos os clientes na mesma sala** usando `emit('message', ..., room=room)`. Isso garante o isolamento das conversas.
-    * `on('leave')`: Lida com a saída de um usuário, usando `leave_room(room)` e atualizando as estruturas de dados.
-
-### `templates/index.html` (Frontend)
-
-Este único arquivo contém a estrutura (HTML), a aparência (CSS) e o comportamento (JavaScript) do cliente.
-
-* **Estrutura (HTML):** O corpo da página é dividido em duas seções principais: `#login` e `#chat-area`. A área de chat só se torna visível após o usuário fornecer um nome. A estrutura inclui uma lista não ordenada (`<ul>`) para as mensagens e formulários para interagir com o sistema.
-* **Estilização (CSS):** Um bloco `<style>` contém regras de CSS para organizar os elementos na tela, criar uma aparência limpa e diferenciar as mensagens do usuário atual das mensagens de outros participantes.
-* **Lógica do Cliente (JavaScript):**
-    * **Conexão:** A linha `const socket = io();` é a responsável por iniciar a conexão WebSocket com o servidor.
-    * **Emissão de Eventos (`socket.emit()`):** Ações do usuário, como clicar no botão "Entrar na Sala" ou "Enviar", são capturadas por `addEventListener`. Esses eventos disparam a função `socket.emit('nome_do_evento', dados)`, enviando as informações (nome do usuário, sala, mensagem) para o backend processar.
-    * **Recepção de Eventos (`socket.on()`):** O cliente também "escuta" por eventos enviados pelo servidor.
-        * `socket.on('message', ...)`: Quando o servidor retransmite uma mensagem, este evento é acionado. O JavaScript cria dinamicamente um novo elemento de lista (`<li>`), insere o conteúdo da mensagem e o adiciona à área de chat.
-        * `socket.on('status', ...)`: Funciona de forma similar, mas para mensagens do sistema (entrada/saída de usuários).
-        * `socket.on('error', ...)`: Exibe um alerta na tela do usuário caso o servidor envie uma mensagem de erro.
-
-## Funcionalidades Implementadas
-
-- [x] **Comunicação em Tempo Real:** Mensagens instantâneas via WebSockets.
-- [x] **Múltiplas Salas:** Suporte para a criação e gerenciamento de várias salas de chat simultâneas.
-- [x] **Isolamento de Salas:** Mensagens de uma sala são restritas apenas aos seus participantes.
-- [x] **Salas Privadas:** Possibilidade de proteger uma sala com senha.
-- [x] **Interface Web Simples:** Interface de usuário limpa e funcional que roda em qualquer navegador moderno.
-- [x] **Status de Usuários:** Notificações de entrada e saída de usuários nas salas.
+* **`app.py`**: O servidor backend. Lida com as rotas HTTP para autenticação (`/login`, `/register`, `/logout`), a rota de monitoramento (`/memory`), e todos os eventos Socket.IO para a lógica do chat, gerenciamento de estado e criptografia.
+* **`templates/login.html`**: Página de entrada da aplicação, com formulários para registro e login.
+* **`templates/index.html`**: A aplicação de página única (SPA) do chat. Contém todo o HTML, CSS e JavaScript para a interface, incluindo a lógica para alternar entre as visões de Lobby e Sala de Chat, e para criptografar/descriptografar mensagens com CryptoJS.
+* **`templates/memory.html`**: A página de monitoramento, que usa Chart.js para desenhar o gráfico com dados recebidos via WebSocket.
+* **`stress_test.py`**: Script independente que simula múltiplos clientes para testar a carga e a estabilidade do servidor.
 
 ## Possíveis Melhorias Futuras
 
-- **Persistência de Dados:** Integrar um banco de dados (ex: SQLite) para que as salas e o histórico de mensagens não se percam quando o servidor é reiniciado.
-- **Autenticação de Usuários:** Implementar um sistema de registro e login completo, com senhas hasheadas e sessões de usuário.
-- **Mensagens Privadas:** Adicionar a funcionalidade de enviar mensagens diretas entre dois usuários.
-- **Lista de Salas e Usuários:** Exibir uma lista de salas disponíveis e uma lista de usuários online em cada sala.
-- **Melhorias de UI/UX:** Aprimorar a interface com um framework como React ou Vue.js, e adicionar recursos como indicadores de "digitando...", emojis e envio de imagens.
-- **Deploy:** Publicar a aplicação em uma plataforma de nuvem (como Heroku, PythonAnywhere ou AWS) para torná-la acessível publicamente na internet.
+-   **Persistência de Dados:** Substituir os dicionários em memória por um banco de dados (ex: SQLite, PostgreSQL) para que usuários, salas e mensagens persistam entre reinicializações do servidor.
+-   **Sistema de Chat Privado 1-para-1:** Melhorar os sussurros para abrirem janelas de chat dedicadas.
+-   **Indicador de "Digitando...":** Adicionar um feedback visual quando um usuário está digitando uma mensagem.
+-   **Deploy na Nuvem:** Publicar a aplicação em uma plataforma como Heroku, Render ou PythonAnywhere, configurando um servidor de produção (como Gunicorn) e um certificado SSL para habilitar HTTPS/WSS.
