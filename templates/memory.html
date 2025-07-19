@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de Memória do Servidor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .chart-container {
+            width: 80%;
+            max-width: 900px;
+            padding: 20px;
+            background: #fff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            text-align: center;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="chart-container">
+        <h1>Uso de Memória do Processo (em MB)</h1>
+        <canvas id="memoryChart"></canvas>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Conecta ao servidor Socket.IO no namespace '/memory'
+            const socket = io('/memory');
+
+            const ctx = document.getElementById('memoryChart').getContext('2d');
+            
+            // Configuração inicial do gráfico
+            const memoryChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [], // Rótulos de tempo (e.g., 14:05:10)
+                    datasets: [{
+                        label: 'Uso de Memória (MB)',
+                        data: [], // Dados de memória
+                        borderColor: 'rgba(0, 123, 255, 1)',
+                        backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4 // Deixa a linha mais suave
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Memória (MB)'
+                            }
+                        },
+                        x: {
+                             title: {
+                                display: true,
+                                text: 'Tempo'
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 200 // Animação suave
+                    }
+                }
+            });
+
+            // Ouve o evento 'memory_update' enviado pelo servidor
+            socket.on('memory_update', function(data) {
+                const chart = memoryChart.data;
+
+                // Adiciona o novo dado e o rótulo de tempo
+                chart.labels.push(data.time);
+                chart.datasets[0].data.push(data.memory);
+
+                // Limita o número de pontos no gráfico para criar um efeito de rolagem
+                const maxDataPoints = 30;
+                if (chart.labels.length > maxDataPoints) {
+                    chart.labels.shift();
+                    chart.datasets[0].data.shift();
+                }
+
+                // Atualiza o gráfico
+                memoryChart.update();
+            });
+
+            socket.on('connect', function() {
+                console.log('Conectado ao monitor de memória.');
+            });
+        });
+    </script>
+</body>
+</html>
