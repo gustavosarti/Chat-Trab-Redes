@@ -59,7 +59,7 @@ A interface é reativa e dividida em dois estados principais: um "Lobby", onde o
     cd SEU-REPOSITORIO
     ```
 
-2.  **Crie e ative um ambiente virtual:**
+2.  **Crie e ative um ambiente virtual:(não é obrigatório)**
     ```bash
     # Criar
     python -m venv venv
