@@ -1,6 +1,5 @@
 # Projeto: Chat Web Seguro em Tempo Real com Flask
 
-![Status](httpshttps://img.shields.io/badge/status-concluído-brightgreen)
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
 ![Flask](https://img.shields.io/badge/Flask-2.x-orange)
 ![Socket.IO](https://img.shields.io/badge/Socket.IO-4.x-yellow)
