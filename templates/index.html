@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Web Criptografado</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <style>
+        :root { 
+            --primary-color: #007bff; 
+            --danger-color: #dc3545; 
+            --light-gray: #f4f4f9; 
+            --border-color: #ddd; 
+            --whisper-color: #6f42c1;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; 
+            background-color: var(--light-gray); 
+            color: #333; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        .header { 
+            background: #fff; 
+            padding: 10px 20px; 
+            border-bottom: 1px solid var(--border-color); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            flex-shrink: 0;
+        }
+        .main-container { 
+            display: flex; 
+            flex-grow: 1; 
+            overflow: hidden; 
+        }
+        .panel { 
+            padding: 15px; 
+            background: #fff; 
+            display: flex; 
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .panel h3 { 
+            margin-top: 0; 
+            color: var(--primary-color); 
+            border-bottom: 2px solid var(--primary-color); 
+            padding-bottom: 10px; 
+            flex-shrink: 0;
+        }
+        .list { 
+            list-style-type: none; 
+            padding: 0; 
+            margin: 0; 
+            overflow-y: auto; 
+        }
+        .list li { 
+            padding: 8px 12px; 
+            margin-bottom: 5px; 
+            border-radius: 4px;
+            word-break: break-all;
+        }
+        .clickable-list li {
+            cursor: pointer;
+        }
+        .clickable-list li:hover {
+            background-color: #dceaf7;
+        }
+        input[type="text"], input[type="password"] { 
+            width: calc(100% - 22px); 
+            padding: 10px; 
+            border: 1px solid var(--border-color); 
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        button { 
+            padding: 10px 15px; 
+            border: none; 
+            background: var(--primary-color); 
+            color: white; 
+            cursor: pointer; 
+            border-radius: 4px;
+        }
+        .logout-btn { background-color: var(--danger-color); }
+        /* Layout */
+        #left-panel { flex: 1 1 200px; border-right: 1px solid var(--border-color); }
+        #center-panel { flex: 3 1 60%; }
+        #right-panel { flex: 1 1 220px; border-left: 1px solid var(--border-color); }
+        .form-section { background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border-color); }
+        #chat-area { display: flex; flex-direction: column; height: 100%; }
+        #messages { flex-grow: 1; overflow-y: scroll; border: 1px solid var(--border-color); padding: 10px; margin-bottom: 10px; }
+        #chat-controls { display: flex; margin-top: auto; flex-shrink: 0; }
+        #chat-controls input { flex-grow: 1; margin-bottom: 0; margin-right: 10px; }
+        /* Estilos de indicadores e mensagens */
+        .online-indicator { height: 10px; width: 10px; background-color: #28a745; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .status-msg { color: #888; font-style: italic; text-align: center; background: none !important; }
+        .my-msg { text-align: right; }
+        .my-msg strong { color: var(--primary-color); }
+        .other-msg strong { color: #28a745; }
+        .whisper-msg { color: var(--whisper-color); font-style: italic; background-color: #f3eef8; border-left: 3px solid var(--whisper-color); }
+        .whisper-msg strong { color: var(--whisper-color); }
+        .ping-time { font-size: 0.8em; color: #999; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <div id="app-container" style="display: flex; flex-direction: column; height: 100%;">
+        <header class="header">
+            <div>
+                Bem-vindo, <strong>{{ username }}</strong>!
+                <span id="current-room-display" style="margin-left: 20px; font-weight: bold;"></span>
+            </div>
+            <button id="leave-room-btn" class="logout-btn" style="display: none;">Sair da Sala</button>
+            <a href="{{ url_for('logout') }}"><button class="logout-btn">Logout</button></a>
+        </header>
+        
+        <main class="main-container">
+            <aside id="left-panel" class="panel"></aside>
+            <section id="center-panel" class="panel">
+                <div id="lobby-controls" style="display: none;">
+                    <div class="form-section">
+                        <h3>Criar uma Sala</h3>
+                        <input type="text" id="create-room-name" placeholder="Nome da nova sala">
+                        <input type="password" id="create-room-password" placeholder="Senha (opcional)">
+                        <button id="create-room-btn">Criar</button>
+                    </div>
+                    <div class="form-section">
+                        <h3>Entrar em uma Sala</h3>
+                        <input type="text" id="join-room-name" placeholder="Nome da sala">
+                        <input type="password" id="join-room-password" placeholder="Senha da sala">
+                        <button id="join-room-btn">Entrar</button>
+                    </div>
+                </div>
+                <div id="chat-area">
+                    <ul id="messages" class="list"></ul>
+                    <div id="chat-controls">
+                        <input type="text" id="message-input" placeholder="Digite sua mensagem...">
+                        <button id="send-button">Enviar</button>
+                    </div>
+                </div>
+            </section>
+            <aside id="right-panel" class="panel"></aside>
+        </main>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const socket = io();
+            const username = "{{ username }}";
+            let currentRoom = '';
+            const pendingMessages = {};
+            let currentRoomKey = null;
+
+            const leftPanel = document.getElementById('left-panel');
+            const centerPanel = document.getElementById('center-panel');
+            const rightPanel = document.getElementById('right-panel');
+            const lobbyControls = document.getElementById('lobby-controls');
+            const chatArea = document.getElementById('chat-area');
+            const createRoomBtn = document.getElementById('create-room-btn');
+            const joinRoomBtn = document.getElementById('join-room-btn');
+            const leaveRoomBtn = document.getElementById('leave-room-btn');
+            const sendBtn = document.getElementById('send-button');
+            const msgInput = document.getElementById('message-input');
+            const messagesList = document.getElementById('messages');
+            const roomDisplay = document.getElementById('current-room-display');
+
+            function updateViewState() {
+                if (currentRoom) {
+                    lobbyControls.style.display = 'none';
+                    leaveRoomBtn.style.display = 'block';
+                    msgInput.disabled = false;
+                    sendBtn.disabled = false;
+                    roomDisplay.innerText = `Sala: ${currentRoom}`;
+                    leftPanel.innerHTML = '<h3>Usuários na Sala</h3><ul id="user-list" class="list clickable-list"></ul>';
+                    rightPanel.innerHTML = '';
+                } else {
+                    lobbyControls.style.display = 'block';
+                    leaveRoomBtn.style.display = 'none';
+                    msgInput.disabled = true;
+                    sendBtn.disabled = true;
+                    roomDisplay.innerText = '';
+                    leftPanel.innerHTML = '<h3>Usuários Online</h3><ul id="global-user-list" class="list clickable-list"></ul>';
+                    rightPanel.innerHTML = '<h3>Salas Disponíveis</h3><ul id="room-list" class="list clickable-list"></ul>';
+                }
+            }
+
+            function initiateWhisper(targetUsername) {
+                if (targetUsername === username) return;
+                const message = prompt(`Digite seu sussurro para ${targetUsername}:`);
+                if (message && message.trim() !== '') {
+                    socket.emit('whisper', { 'target_username': targetUsername, 'msg': message });
+                }
+            }
+            
+            createRoomBtn.addEventListener('click', () => {
+                const roomName = document.getElementById('create-room-name').value.trim();
+                if(roomName) { socket.emit('create', { room: roomName, password: document.getElementById('create-room-password').value }); }
+            });
+
+            const joinRoomAction = (roomName, password) => {
+                if (currentRoom === roomName) return;
+                socket.emit('join', { room: roomName, password: password });
+            };
+            
+            joinRoomBtn.addEventListener('click', () => {
+                const roomName = document.getElementById('join-room-name').value.trim();
+                if(roomName) { joinRoomAction(roomName, document.getElementById('join-room-password').value); }
+            });
+
+            leaveRoomBtn.addEventListener('click', () => {
+                socket.emit('leave');
+                currentRoom = '';
+                currentRoomKey = null; // Limpa a chave ao sair da sala
+                messagesList.innerHTML = '';
+                updateViewState();
+            });
+
+            const sendMessage = () => {
+                const msg = msgInput.value.trim();
+                if (msg && currentRoom && currentRoomKey) {
+                    const messageId = `${Date.now()}-${Math.random()}`;
+                    pendingMessages[messageId] = Date.now();
+                    
+                    try {
+                        const iv = CryptoJS.lib.WordArray.random(16);
+                        // ### MUDANÇA: Usa o objeto 'currentRoomKey' diretamente ###
+                        const encrypted = CryptoJS.AES.encrypt(msg, currentRoomKey, { iv: iv });
+                        
+                        // Concatena o IV com a mensagem criptografada
+                        const payload = iv.clone().concat(encrypted.ciphertext);
+                        const payloadB64 = payload.toString(CryptoJS.enc.Base64);
+
+                        socket.emit('text', { 
+                            room: currentRoom, 
+                            msg: payloadB64,
+                            id: messageId
+                        });
+                        msgInput.value = '';
+                    } catch(e) {
+                        console.error("Erro ao criptografar:", e);
+                        alert("Erro ao criptografar a mensagem.");
+                    }
+                }
+            };
+            sendBtn.addEventListener('click', sendMessage);
+            msgInput.addEventListener('keypress', (e) => (e.key === 'Enter') && sendMessage());
+
+            function renderUserList(selector, users) {
+                const listElement = document.querySelector(selector);
+                if (!listElement) return;
+                listElement.innerHTML = '';
+                users.forEach(user => {
+                    const item = document.createElement('li');
+                    item.innerHTML = `<span class="online-indicator"></span>${user}`;
+                    item.addEventListener('click', () => initiateWhisper(user));
+                    listElement.appendChild(item);
+                });
+            }
+
+            function renderRoomList(rooms) {
+                const roomListElement = document.querySelector('#room-list');
+                if(!roomListElement) return;
+                roomListElement.innerHTML = '';
+                rooms.forEach(room => {
+                    const item = document.createElement('li');
+                    item.textContent = room.name;
+                    if (room.has_password) { item.innerHTML += ' 🔒'; }
+                    item.addEventListener('click', () => {
+                        let password = '';
+                        if (room.has_password) {
+                            password = prompt(`A sala "${room.name}" é protegida. Por favor, digite a senha:`);
+                            if (password === null) return;
+                        }
+                        joinRoomAction(room.name, password);
+                    });
+                    roomListElement.appendChild(item);
+                });
+            }
+
+            // --- Ouvindo Eventos do Servidor ---
+
+            socket.on('room_key', (data) => {
+                // ### MUDANÇA: Decodifica a chave para o formato WordArray ao receber ###
+                currentRoomKey = CryptoJS.enc.Base64.parse(data.key);
+            });
+
+            socket.on('global_user_list_update', (data) => renderUserList('#global-user-list', data.users));
+            socket.on('user_list_update', (data) => renderUserList('#user-list', data.users));
+            socket.on('room_list_update', (data) => renderRoomList(data.rooms));
+            
+            socket.on('status', (data) => {
+                if (data.msg.includes(`${username} entrou na sala`)) {
+                    messagesList.innerHTML = '';
+                    currentRoom = data.room;
+                    updateViewState();
+                }
+                const item = document.createElement('li');
+                item.classList.add('status-msg');
+                item.innerText = data.msg;
+                messagesList.appendChild(item);
+                messagesList.scrollTop = messagesList.scrollHeight;
+            });
+
+            socket.on('message', (data) => {
+                const item = document.createElement('li');
+                let pingHtml = '';
+                let decryptedMsg = '[Erro: Chave de criptografia não disponível]';
+
+                if (currentRoomKey) {
+                    try {
+                        // ### MUDANÇA: Usa o objeto 'currentRoomKey' diretamente e o formato IV+Criptograma ###
+                        const rawData = CryptoJS.enc.Base64.parse(data.msg);
+                        const iv = CryptoJS.lib.WordArray.create(rawData.words.slice(0, 4));
+                        const encryptedText = CryptoJS.lib.WordArray.create(rawData.words.slice(4));
+
+                        const bytes = CryptoJS.AES.decrypt({ciphertext: encryptedText}, currentRoomKey, {iv: iv});
+                        
+                        decryptedMsg = bytes.toString(CryptoJS.enc.Utf8);
+                        if (!decryptedMsg) {
+                           decryptedMsg = "[Mensagem Corrompida ou Chave Incorreta]";
+                        }
+                    } catch (e) {
+                        decryptedMsg = "[Erro ao descriptografar]";
+                    }
+                }
+                
+                if (data.username === username && data.id && pendingMessages[data.id]) {
+                    const latency = Date.now() - pendingMessages[data.id];
+                    pingHtml = `<span class="ping-time">(${latency}ms)</span>`;
+                    delete pendingMessages[data.id];
+                }
+
+                item.innerHTML = `<strong>${data.username}:</strong> ${decryptedMsg} ${pingHtml}`;
+                item.classList.add(data.username === username ? 'my-msg' : 'other-msg');
+                messagesList.appendChild(item);
+                messagesList.scrollTop = messagesList.scrollHeight;
+            });
+
+            socket.on('private_message', (data) => {
+                const item = document.createElement('li');
+                item.classList.add('whisper-msg');
+                if (data.sender === username) {
+                    item.innerHTML = `<strong>Você sussurrou para ${data.recipient}:</strong> ${data.msg}`;
+                } else {
+                    item.innerHTML = `<strong>${data.sender} sussurrou para você:</strong> ${data.msg}`;
+                }
+                messagesList.appendChild(item);
+                messagesList.scrollTop = messagesList.scrollHeight;
+            });
+            
+            socket.on('error', (data) => {
+                alert('Erro: ' + data.msg);
+            });
+            
+            updateViewState();
+        });
+    </script>
+</body>
+</html>
