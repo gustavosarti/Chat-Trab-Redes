@@ -6,6 +6,7 @@
     <title>Chat Web Criptografado</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
     <style>
+        /* Estilos Gerais */
         :root { 
             --primary-color: #007bff; 
             --danger-color: #dc3545; 
@@ -84,7 +85,8 @@
             border-radius: 4px;
         }
         .logout-btn { background-color: var(--danger-color); }
-        /* Layout */
+
+        /* Layout dos painéis */
         #left-panel { flex: 1 1 200px; border-right: 1px solid var(--border-color); }
         #center-panel { flex: 3 1 60%; }
         #right-panel { flex: 1 1 220px; border-left: 1px solid var(--border-color); }
@@ -93,6 +95,7 @@
         #messages { flex-grow: 1; overflow-y: scroll; border: 1px solid var(--border-color); padding: 10px; margin-bottom: 10px; }
         #chat-controls { display: flex; margin-top: auto; flex-shrink: 0; }
         #chat-controls input { flex-grow: 1; margin-bottom: 0; margin-right: 10px; }
+        
         /* Estilos de indicadores e mensagens */
         .online-indicator { height: 10px; width: 10px; background-color: #28a745; border-radius: 50%; display: inline-block; margin-right: 8px; }
         .status-msg { color: #888; font-style: italic; text-align: center; background: none !important; }
@@ -117,6 +120,7 @@
         
         <main class="main-container">
             <aside id="left-panel" class="panel"></aside>
+            
             <section id="center-panel" class="panel">
                 <div id="lobby-controls" style="display: none;">
                     <div class="form-section">
@@ -140,6 +144,7 @@
                     </div>
                 </div>
             </section>
+            
             <aside id="right-panel" class="panel"></aside>
         </main>
     </div>
@@ -147,12 +152,16 @@
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const socket = io();
-            const username = "{{ username }}";
-            let currentRoom = '';
-            const pendingMessages = {};
-            let currentRoomKey = null;
+            // Inicializa a conexão com o servidor Socket.IO
+            const socket = io('/');
+            
+            // Variáveis de estado do cliente
+            const username = "{{ username }}"; // Nome do usuário logado, injetado pelo Flask
+            let currentRoom = ''; // Sala em que o usuário está atualmente
+            const pendingMessages = {}; // Armazena timestamps para cálculo do ping
+            let currentRoomKey = null; // Armazena a chave de criptografia da sala atual
 
+            // Seletores de Elementos da UI para manipulação
             const leftPanel = document.getElementById('left-panel');
             const centerPanel = document.getElementById('center-panel');
             const rightPanel = document.getElementById('right-panel');
@@ -166,41 +175,57 @@
             const messagesList = document.getElementById('messages');
             const roomDisplay = document.getElementById('current-room-display');
 
+            /**
+             * Função central que gerencia a interface, alternando entre a visão
+             * de "Lobby" e a visão de "Sala de Chat".
+             */
             function updateViewState() {
                 if (currentRoom) {
+                    // Estado: DENTRO de uma sala
                     lobbyControls.style.display = 'none';
                     leaveRoomBtn.style.display = 'block';
                     msgInput.disabled = false;
                     sendBtn.disabled = false;
                     roomDisplay.innerText = `Sala: ${currentRoom}`;
+                    
+                    // Configura os painéis laterais para a visão de sala
                     leftPanel.innerHTML = '<h3>Usuários na Sala</h3><ul id="user-list" class="list clickable-list"></ul>';
                     rightPanel.innerHTML = '';
                 } else {
+                    // Estado: FORA de uma sala (Lobby)
                     lobbyControls.style.display = 'block';
                     leaveRoomBtn.style.display = 'none';
                     msgInput.disabled = true;
                     sendBtn.disabled = true;
                     roomDisplay.innerText = '';
+                    
+                    // Configura os painéis laterais para a visão de lobby
                     leftPanel.innerHTML = '<h3>Usuários Online</h3><ul id="global-user-list" class="list clickable-list"></ul>';
                     rightPanel.innerHTML = '<h3>Salas Disponíveis</h3><ul id="room-list" class="list clickable-list"></ul>';
                 }
             }
 
+            /**
+             * Inicia o processo de envio de um sussurro para um usuário.
+             * @param {string} targetUsername - O nome do usuário que receberá o sussurro.
+             */
             function initiateWhisper(targetUsername) {
-                if (targetUsername === username) return;
+                if (targetUsername === username) return; // Impede sussurro para si mesmo
                 const message = prompt(`Digite seu sussurro para ${targetUsername}:`);
                 if (message && message.trim() !== '') {
                     socket.emit('whisper', { 'target_username': targetUsername, 'msg': message });
                 }
             }
             
+            // Adiciona listeners de eventos para os botões e ações do usuário.
             createRoomBtn.addEventListener('click', () => {
                 const roomName = document.getElementById('create-room-name').value.trim();
                 if(roomName) { socket.emit('create', { room: roomName, password: document.getElementById('create-room-password').value }); }
             });
 
             const joinRoomAction = (roomName, password) => {
-                if (currentRoom === roomName) return;
+                if (currentRoom === roomName) return; // Não faz nada se já estiver na sala
+                // Apenas emite o evento. A mudança de estado ocorrerá após a confirmação do servidor.
                 socket.emit('join', { room: roomName, password: password });
             };
             
@@ -212,7 +237,7 @@
             leaveRoomBtn.addEventListener('click', () => {
                 socket.emit('leave');
                 currentRoom = '';
-                currentRoomKey = null; // Limpa a chave ao sair da sala
+                currentRoomKey = null; // Limpa a chave de criptografia
                 messagesList.innerHTML = '';
                 updateViewState();
             });
@@ -221,16 +246,14 @@
                 const msg = msgInput.value.trim();
                 if (msg && currentRoom && currentRoomKey) {
                     const messageId = `${Date.now()}-${Math.random()}`;
-                    pendingMessages[messageId] = Date.now();
+                    pendingMessages[messageId] = Date.now(); // Armazena timestamp para o ping
                     
                     try {
-                        const iv = CryptoJS.lib.WordArray.random(16);
-                        // ### MUDANÇA: Usa o objeto 'currentRoomKey' diretamente ###
+                        // Lógica de criptografia AES-CBC
+                        const iv = CryptoJS.lib.WordArray.random(16); // Gera Vetor de Inicialização
                         const encrypted = CryptoJS.AES.encrypt(msg, currentRoomKey, { iv: iv });
-                        
-                        // Concatena o IV com a mensagem criptografada
-                        const payload = iv.clone().concat(encrypted.ciphertext);
-                        const payloadB64 = payload.toString(CryptoJS.enc.Base64);
+                        const payload = iv.clone().concat(encrypted.ciphertext); // Combina IV + Criptograma
+                        const payloadB64 = payload.toString(CryptoJS.enc.Base64); // Codifica em Base64
 
                         socket.emit('text', { 
                             room: currentRoom, 
@@ -247,6 +270,11 @@
             sendBtn.addEventListener('click', sendMessage);
             msgInput.addEventListener('keypress', (e) => (e.key === 'Enter') && sendMessage());
 
+            /**
+             * Renderiza uma lista de usuários em um elemento da UI.
+             * @param {string} selector - O seletor CSS do elemento <ul>.
+             * @param {string[]} users - Uma lista de nomes de usuário.
+             */
             function renderUserList(selector, users) {
                 const listElement = document.querySelector(selector);
                 if (!listElement) return;
@@ -254,11 +282,15 @@
                 users.forEach(user => {
                     const item = document.createElement('li');
                     item.innerHTML = `<span class="online-indicator"></span>${user}`;
-                    item.addEventListener('click', () => initiateWhisper(user));
+                    item.addEventListener('click', () => initiateWhisper(user)); // Adiciona listener para sussurro
                     listElement.appendChild(item);
                 });
             }
 
+            /**
+             * Renderiza a lista de salas disponíveis.
+             * @param {Object[]} rooms - Uma lista de objetos de sala.
+             */
             function renderRoomList(rooms) {
                 const roomListElement = document.querySelector('#room-list');
                 if(!roomListElement) return;
@@ -279,21 +311,25 @@
                 });
             }
 
-            // --- Ouvindo Eventos do Servidor ---
+            // --- Handlers para Eventos Recebidos do Servidor ---
 
+            // Recebe e armazena a chave de criptografia da sala.
             socket.on('room_key', (data) => {
-                // ### MUDANÇA: Decodifica a chave para o formato WordArray ao receber ###
+                // Decodifica a chave de Base64 para o formato WordArray do CryptoJS.
                 currentRoomKey = CryptoJS.enc.Base64.parse(data.key);
             });
 
+            // Atualiza as listas da UI.
             socket.on('global_user_list_update', (data) => renderUserList('#global-user-list', data.users));
             socket.on('user_list_update', (data) => renderUserList('#user-list', data.users));
             socket.on('room_list_update', (data) => renderRoomList(data.rooms));
             
+            // Lida com mensagens de status (entrada/saída de usuários).
             socket.on('status', (data) => {
+                // A mudança de estado da UI para "dentro da sala" é reativa, só acontece após a confirmação do servidor.
                 if (data.msg.includes(`${username} entrou na sala`)) {
                     messagesList.innerHTML = '';
-                    currentRoom = data.room;
+                    currentRoom = data.room; // Atualiza o estado local com o nome da sala vindo do servidor
                     updateViewState();
                 }
                 const item = document.createElement('li');
@@ -303,6 +339,7 @@
                 messagesList.scrollTop = messagesList.scrollHeight;
             });
 
+            // Lida com o recebimento de mensagens de sala.
             socket.on('message', (data) => {
                 const item = document.createElement('li');
                 let pingHtml = '';
@@ -310,11 +347,10 @@
 
                 if (currentRoomKey) {
                     try {
-                        // ### MUDANÇA: Usa o objeto 'currentRoomKey' diretamente e o formato IV+Criptograma ###
+                        // Lógica de descriptografia AES-CBC
                         const rawData = CryptoJS.enc.Base64.parse(data.msg);
-                        const iv = CryptoJS.lib.WordArray.create(rawData.words.slice(0, 4));
-                        const encryptedText = CryptoJS.lib.WordArray.create(rawData.words.slice(4));
-
+                        const iv = CryptoJS.lib.WordArray.create(rawData.words.slice(0, 4)); // Extrai o IV
+                        const encryptedText = CryptoJS.lib.WordArray.create(rawData.words.slice(4)); // Extrai o criptograma
                         const bytes = CryptoJS.AES.decrypt({ciphertext: encryptedText}, currentRoomKey, {iv: iv});
                         
                         decryptedMsg = bytes.toString(CryptoJS.enc.Utf8);
@@ -326,6 +362,7 @@
                     }
                 }
                 
+                // Calcula o ping se a mensagem for um eco do próprio usuário.
                 if (data.username === username && data.id && pendingMessages[data.id]) {
                     const latency = Date.now() - pendingMessages[data.id];
                     pingHtml = `<span class="ping-time">(${latency}ms)</span>`;
@@ -338,6 +375,7 @@
                 messagesList.scrollTop = messagesList.scrollHeight;
             });
 
+            // Lida com o recebimento de sussurros.
             socket.on('private_message', (data) => {
                 const item = document.createElement('li');
                 item.classList.add('whisper-msg');
@@ -350,10 +388,12 @@
                 messagesList.scrollTop = messagesList.scrollHeight;
             });
             
+            // Lida com erros enviados pelo servidor.
             socket.on('error', (data) => {
                 alert('Erro: ' + data.msg);
             });
             
+            // Define o estado inicial da UI ao carregar a página.
             updateViewState();
         });
     </script>
