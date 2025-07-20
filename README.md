@@ -55,8 +55,7 @@ A interface é reativa e dividida em dois estados principais: um "Lobby", onde o
 
 1.  **Clone o repositório:**
     ```bash
-    git clone [https://github.com/SEU-USUARIO/SEU-REPOSITORIO.git](https://github.com/SEU-USUARIO/SEU-REPOSITORIO.git)
-    cd SEU-REPOSITORIO
+    git clone https://github.com/gustavosarti/Chat-Trab-Redes
     ```
 
 2.  **Crie e ative um ambiente virtual:(não é obrigatório)**
