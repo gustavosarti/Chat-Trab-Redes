@@ -39,12 +39,12 @@
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Conecta ao servidor Socket.IO no namespace '/memory'
+            // Conecta ao servidor no namespace '/memory' para não interferir com o chat.
             const socket = io('/memory');
 
             const ctx = document.getElementById('memoryChart').getContext('2d');
             
-            // Configuração inicial do gráfico
+            // Configuração inicial do gráfico com Chart.js.
             const memoryChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -63,40 +63,34 @@
                     scales: {
                         y: {
                             beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Memória (MB)'
-                            }
+                            title: { display: true, text: 'Memória (MB)' }
                         },
                         x: {
-                             title: {
-                                display: true,
-                                text: 'Tempo'
-                            }
+                             title: { display: true, text: 'Tempo' }
                         }
                     },
                     animation: {
-                        duration: 200 // Animação suave
+                        duration: 200
                     }
                 }
             });
 
-            // Ouve o evento 'memory_update' enviado pelo servidor
+            // Ouve o evento 'memory_update' enviado pelo servidor.
             socket.on('memory_update', function(data) {
                 const chart = memoryChart.data;
 
-                // Adiciona o novo dado e o rótulo de tempo
+                // Adiciona o novo dado e o rótulo de tempo ao gráfico.
                 chart.labels.push(data.time);
                 chart.datasets[0].data.push(data.memory);
 
-                // Limita o número de pontos no gráfico para criar um efeito de rolagem
+                // Limita o número de pontos no gráfico para criar um efeito de rolagem.
                 const maxDataPoints = 30;
                 if (chart.labels.length > maxDataPoints) {
                     chart.labels.shift();
                     chart.datasets[0].data.shift();
                 }
 
-                // Atualiza o gráfico
+                // Atualiza o gráfico para redesenhar com os novos dados.
                 memoryChart.update();
             });
 
