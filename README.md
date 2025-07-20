@@ -96,12 +96,6 @@ A aplicação foi projetada para ser testada de várias maneiras.
 6.  **Teste o sussurro:** Clique no nome de um usuário em qualquer lista e envie uma mensagem privada. Observe a formatação especial no chat.
 7.  Com um dos usuários, clique em **"Sair da Sala"**. Observe que a interface dele retorna ao lobby instantaneamente, e o outro usuário vê uma notificação de saída.
 
-### Teste de Criptografia
-1.  Siga as instruções no [guia de teste de criptografia](link_para_um_gist_ou_outro_arquivo_se_quiser) ou use as Ferramentas de Desenvolvedor (F12) do navegador.
-2.  Na aba "Network" (Rede), filtre por "WS" e inspecione as mensagens.
-3.  As mensagens de sala (evento `text`) terão o campo `msg` com um longo texto criptografado.
-4.  As mensagens de sussurro (evento `private_message`) terão o campo `msg` em texto plano.
-
 ### Teste de Carga e Memória
 1.  Com o servidor `app.py` rodando, abra um **novo terminal**.
 2.  Execute o script de teste de estresse: `python stress_test.py`.
