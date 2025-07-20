@@ -21,14 +21,10 @@ online_users = {}
 
 # --- Funções Auxiliares de Emissão ---
 def update_global_user_list():
-    """Emite a lista de todos os usuários online para todos os clientes no namespace do chat."""
-    # ### MUDANÇA 1: Removido 'broadcast=True' ###
     socketio.emit('global_user_list_update', {'users': list(online_users.keys())}, namespace='/')
 
 def update_room_list():
-    """Emite a lista de salas disponíveis para todos os clientes no namespace do chat."""
     public_rooms = [{"name": name, "has_password": bool(details["password"])} for name, details in rooms.items()]
-    # ### MUDANÇA 2: Removido 'broadcast=True' ###
     socketio.emit('room_list_update', {'rooms': public_rooms}, namespace='/')
 
 # --- Rotas HTTP ---
@@ -46,8 +42,10 @@ def login_page():
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
         if username in user_credentials and user_credentials[username] == hashed_password:
             session['username'] = username
+            print(f"[AUTH] Login bem-sucedido para o usuário: '{username}'")
             return redirect(url_for('index'))
         else:
+            print(f"[AUTH] Falha no login para o usuário: '{username}'")
             return "Usuário ou senha inválidos. <a href='/login'>Tente novamente</a>"
     return render_template('login.html')
 
@@ -56,13 +54,16 @@ def register():
     username = request.form['username']
     password = request.form['password']
     if username in user_credentials:
+        print(f"[AUTH] Tentativa de registro de usuário já existente: '{username}'")
         return "Usuário já existe. <a href='/login'>Tente outro nome</a>"
     user_credentials[username] = hashlib.sha256(password.encode()).hexdigest()
+    print(f"[AUTH] Novo usuário registrado: '{username}'")
     return redirect(url_for('login_page'))
 
 @app.route('/logout')
 def logout():
-    session.pop('username', None)
+    username = session.pop('username', None)
+    print(f"[AUTH] Usuário '{username}' fez logout.")
     return redirect(url_for('login_page'))
 
 @app.route('/memory')
@@ -80,31 +81,32 @@ def memory_monitor_thread():
         socketio.sleep(2)
 
 # --- Eventos do Socket.IO ---
-
 @socketio.on('connect', namespace='/memory')
 def memory_connect():
     global thread
     with thread_lock:
         if thread is None:
             thread = socketio.start_background_task(target=memory_monitor_thread)
-    print('Cliente conectado ao monitor de memória.')
+    print('[MONITOR] Cliente conectado ao monitor de memória.')
 
-# ### MUDANÇA 3: Adicionado argumento 'auth=None' ###
 @socketio.on('connect', namespace='/')
 def on_connect(auth=None):
     username = session.get('username')
     if not username: return False
     online_users[username] = request.sid
+    print(f"[CONNECT] Usuário '{username}' conectou (SID: {request.sid})")
     update_global_user_list()
     update_room_list()
 
 @socketio.on('create', namespace='/')
 def on_create(data):
     if 'username' not in session: return
+    username = session.get('username')
     room, password = data['room'], data.get('password')
     if room not in rooms:
         key = os.urandom(16)
         rooms[room] = {'password': password, 'users': {}, 'key': key}
+        print(f"[ROOM] Usuário '{username}' criou a sala '{room}'")
         emit('status', {'msg': f'Sala "{room}" criada com sucesso!'}, to=request.sid)
         update_room_list()
     else:
@@ -115,18 +117,15 @@ def on_join(data):
     username = session.get('username')
     if not username: return
     room, password, sid = data['room'], data.get('password', ''), request.sid
-    
     if room not in rooms or (rooms[room]['password'] is not None and rooms[room]['password'] != password):
         emit('error', {'msg': f'Não foi possível entrar na sala "{room}".'})
         return
-
     join_room(room)
     rooms[room]['users'][sid] = username
-    
+    print(f"[ROOM] Usuário '{username}' entrou na sala '{room}'")
     room_key = rooms[room]['key']
     key_b64 = base64.b64encode(room_key).decode('utf-8')
     emit('room_key', {'key': key_b64}, to=sid)
-    
     user_list = list(rooms[room]['users'].values())
     emit('status', {'msg': f'{username} entrou na sala.', 'room': room}, room=room)
     emit('user_list_update', {'users': user_list}, room=room)
@@ -136,20 +135,19 @@ def on_leave():
     username = session.get('username')
     sid = request.sid
     if not username: return
-
     for room_name, details in list(rooms.items()):
         if sid in details['users']:
+            print(f"[ROOM] Usuário '{username}' saiu da sala '{room_name}'")
             leave_room(room_name)
             del rooms[room_name]['users'][sid]
             emit('status', {'msg': f'{username} saiu da sala.'}, room=room_name)
-
             if not rooms[room_name]['users']:
                 del rooms[room_name]
+                print(f"[ROOM] Sala '{room_name}' vazia, foi removida.")
                 update_room_list()
             else:
                 user_list = list(rooms[room_name]['users'].values())
                 emit('user_list_update', {'users': user_list}, room=room_name)
-            
             public_rooms = [{"name": name, "has_password": bool(details["password"])} for name, details in rooms.items()]
             online_user_list = list(online_users.keys())
             emit('room_list_update', {'rooms': public_rooms}, to=sid)
@@ -164,8 +162,8 @@ def on_disconnect():
         if user_sid == sid:
             username_to_remove = user
             break
-    
     if username_to_remove:
+        print(f"[DISCONNECT] Usuário '{username_to_remove}' desconectado (SID: {sid})")
         on_leave() 
         if username_to_remove in online_users:
             del online_users[username_to_remove]
@@ -175,16 +173,16 @@ def on_disconnect():
 def on_text(data):
     username = session.get('username')
     if not username: return
-    emit('message', {
-        'username': username, 
-        'msg': data['msg'],
-        'id': data.get('id')
-    }, room=data['room'])
+    # DEBUG para mensagem de sala (criptografada)
+    print(f"[MESSAGE] Recebido de '{username}': {data}")
+    emit('message', {'username': username, 'msg': data['msg'], 'id': data.get('id')}, room=data['room'])
 
 @socketio.on('whisper', namespace='/')
 def on_whisper(data):
     sender_username = session.get('username')
     if not sender_username: return
+    # DEBUG para sussurro (texto plano)
+    print(f"[WHISPER] Recebido de '{sender_username}': {data}")
     target_username = data['target_username']
     message = data['msg']
     recipient_sid = online_users.get(target_username)
